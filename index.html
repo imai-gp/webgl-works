@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebGL Works</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080a0f;
+      --bg2: #0d1017;
+      --surface: #111520;
+      --border: rgba(255,255,255,0.06);
+      --accent: #ffffff;
+      --accent2: #7b61ff;
+      --text: #e8eaf0;
+      --muted: #4a5068;
+      --hover-scale: 1.02;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Poppins', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* Header */
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 64px 48px 40px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-left {}
+
+    .label {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: clamp(56px, 8vw, 100px);
+      line-height: 0.9;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      position: relative;
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .header-right {
+      text-align: right;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.8;
+      padding-bottom: 8px;
+    }
+
+    /* Grid */
+    main {
+      position: relative;
+      z-index: 10;
+      padding: 48px 48px 80px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 2px;
+    }
+
+    /* Card */
+    .card {
+      position: relative;
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: var(--surface);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .card:hover {
+      transform: scale(var(--hover-scale));
+      z-index: 2;
+    }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 60%, rgba(255,255,255,0.03));
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .card:hover::after { opacity: 1; }
+
+    /* Thumbnail */
+    .thumb {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s;
+      filter: saturate(0.7) brightness(0.8);
+    }
+
+    .card:hover .thumb img {
+      transform: scale(1.06);
+      filter: saturate(1) brightness(1);
+    }
+
+    /* Placeholder */
+    .thumb-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .thumb-placeholder::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 40%, var(--c1), transparent 60%),
+                  radial-gradient(ellipse at 70% 70%, var(--c2), transparent 60%);
+      opacity: 0.5;
+    }
+
+    .thumb-placeholder .icon {
+      position: relative;
+      z-index: 1;
+      font-size: 40px;
+      opacity: 0.15;
+    }
+
+    /* Card info */
+    .card-info {
+      padding: 16px 20px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-num {
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      opacity: 0.7;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    .card-text {}
+
+    .card-title {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .card-arrow {
+      font-size: 18px;
+      color: var(--muted);
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: color 0.2s, transform 0.3s;
+    }
+
+    .card:hover .card-arrow {
+      color: var(--accent);
+      transform: translate(3px, -3px);
+    }
+
+    /* Entry animation */
+    .card {
+      animation: fadeUp 0.5s ease both;
+    }
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.15s; }
+    .card:nth-child(3) { animation-delay: 0.25s; }
+    .card:nth-child(4) { animation-delay: 0.35s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      header { padding: 40px 24px 32px; flex-direction: column; align-items: flex-start; gap: 16px; }
+      main { padding: 32px 24px 60px; }
+      footer { padding: 20px 24px; flex-direction: column; gap: 8px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <p class="label">Interactive Experiments</p>
+    <h1>WebGL<br><span>Works</span></h1>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+
+    <!-- glass -->
+    <a class="card" href="glass/dist/index.html">
+      <div class="thumb">
+        <img src="assets/images/01.webp" alt="Glass Material">
+      </div>
+      <div class="card-info">
+        <span class="card-num">01</span>
+        <div class="card-text">
+          <div class="card-title">Glass Material</div>
+        </div>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
+    <!-- soap_bubbles -->
+    <a class="card" href="soap_bubbles/dist/index.html">
+      <div class="thumb">
+        <img src="assets/images/02.webp" alt="Soap Bubbles">
+      </div>
+      <div class="card-info">
+        <span class="card-num">02</span>
+        <div class="card-text">
+          <div class="card-title">Soap Bubbles</div>
+        </div>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
+    <!-- kinetic_typography -->
+    <a class="card" href="kinetic_typography/index.html">
+      <div class="thumb">
+        <img src="assets/images/03.webp" alt="Kinetic Typography">
+      </div>
+      <div class="card-info">
+        <span class="card-num">03</span>
+        <div class="card-text">
+          <div class="card-title">Mobius Ring</div>
+        </div>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
+    <!-- stream_line -->
+    <a class="card" href="stream_line/index.html">
+      <div class="thumb">
+        <img src="assets/images/04.webp" alt="Stream Line">
+      </div>
+      <div class="card-info">
+        <span class="card-num">04</span>
+        <div class="card-text">
+          <div class="card-title">Stream Line</div>
+        </div>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
+  </div>
+</main>
+
+</body>
+</html>

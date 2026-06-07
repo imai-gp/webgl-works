@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Line Stream</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { overflow: hidden; background: #f0f2f5; width: 100vw; height: 100vh; }
+    canvas { display: block; }
+
+    /* ── コーナーテキスト ── */
+    .meta {
+      position: fixed;
+      top: 24px;
+      right: 20px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      color: rgba(0,0,0,0.45);
+      letter-spacing: 0.12em;
+      line-height: 1.8;
+      text-align: right;
+      user-select: none;
+      z-index: 1;
+    }
+    #fps {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      color: rgba(0,0,0,0.25);
+      letter-spacing: 0.08em;
+      user-select: none;
+      z-index: 1;
+    }
+    .meta-left {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      color: rgba(0,0,0,0.45);
+      letter-spacing: 0.12em;
+      line-height: 1.8;
+      user-select: none;
+      z-index: 1;
+    }
+
+    /* ── パラメーターパネル ── */
+    #panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 20;
+      background: rgba(12,12,16,0.82);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      padding: 16px 18px;
+      min-width: 236px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      font-family: 'Poppins', sans-serif;
+      color: rgba(255,255,255,0.55);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    #panel.hidden {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.97);
+      pointer-events: none;
+    }
+
+    #panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      cursor: pointer;
+    }
+    #panel-head h3 {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: rgba(255,255,255,0.30);
+      text-transform: uppercase;
+    }
+    #panel-toggle-btn {
+      font-size: 14px;
+      color: rgba(255,255,255,0.30);
+      line-height: 1;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .section-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: rgba(255,255,255,0.20);
+      text-transform: uppercase;
+      margin: 12px 0 8px;
+    }
+    .section-label:first-of-type { margin-top: 0; }
+
+    .param-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 11px;
+    }
+    .param-row:last-child { margin-bottom: 0; }
+
+    .param-label {
+      flex: 0 0 76px;
+      white-space: nowrap;
+      color: rgba(255,255,255,0.60);
+      font-size: 11px;
+    }
+
+    .info-btn {
+      flex: 0 0 auto;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.22);
+      background: transparent;
+      color: rgba(255,255,255,0.30);
+      font-family: 'Poppins', sans-serif;
+      font-size: 8px;
+      font-weight: 700;
+      font-style: italic;
+      cursor: default;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transition: border-color 0.18s, color 0.18s;
+      user-select: none;
+    }
+    .info-btn:hover {
+      border-color: rgba(255,255,255,0.55);
+      color: rgba(255,255,255,0.70);
+    }
+
+    .param-val {
+      flex: 0 0 38px;
+      text-align: right;
+      color: rgba(255,255,255,0.90);
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.15);
+      outline: none;
+      cursor: pointer;
+      min-width: 0;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+      cursor: pointer;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.07);
+      margin: 12px 0;
+    }
+
+    /* ── ツールチップ ── */
+    #tooltip {
+      position: fixed;
+      z-index: 1000;
+      background: rgba(10,10,16,0.96);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 10px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.78);
+      width: 190px;
+      line-height: 1.65;
+      letter-spacing: 0.025em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.16s ease;
+      white-space: normal;
+    }
+  </style>
+</head>
+<body>
+
+<div class="meta">COLLECTION 004<br>2026</div>
+<div id="fps">-- fps</div>
+<div class="meta-left">WEBGL · THREE.JS<br>LINE STREAM</div>
+
+<div id="tooltip"></div>
+
+<div id="panel">
+  <div id="panel-head">
+    <h3>Parameters</h3>
+    <button id="panel-toggle-btn">−</button>
+  </div>
+
+  <div id="panel-body">
+    <div class="section-label">Geometry</div>
+    <div class="param-row">
+      <span class="param-label">Lane Count</span>
+      <span class="info-btn" data-tip="画面上のレーン（ライン軌道）の本数。増やすほど密度が上がる。">i</span>
+      <input type="range" min="1" max="12" step="1" value="12" data-key="laneCount" data-rebuild="1">
+      <span class="param-val">12</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Lane Spread</span>
+      <span class="info-btn" data-tip="レーン全体の上下幅。大きいほど画面の端から端まで広がる。">i</span>
+      <input type="range" min="2" max="16" step="0.1" value="3.8" data-key="laneSpread" data-rebuild="1">
+      <span class="param-val">3.80</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Line Height</span>
+      <span class="info-btn" data-tip="ラインの太さ（ワールド単位）。レーン間隔とは完全に独立して制御できる。">i</span>
+      <input type="range" min="0.01" max="1.0" step="0.01" value="0.12" data-key="lineHeight" data-rebuild="1">
+      <span class="param-val">0.12</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Segs / Lane</span>
+      <span class="info-btn" data-tip="1レーンあたりのセグメント数。増やすと画面内の密度が上がり、途切れが減る。">i</span>
+      <input type="range" min="1" max="12" step="1" value="12" data-key="segsPerLane" data-rebuild="1">
+      <span class="param-val">12</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">Motion</div>
+    <div class="param-row">
+      <span class="param-label">Speed</span>
+      <span class="info-btn" data-tip="セグメントが左から右へ流れる速度（ローカル単位/フレーム）。">i</span>
+      <input type="range" min="0.01" max="0.5" step="0.01" value="0.12" data-key="speed">
+      <span class="param-val">0.12</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Gap Base</span>
+      <span class="info-btn" data-tip="セグメント間の最小ギャップ。0に近いほどラインが隙間なく連なる。">i</span>
+      <input type="range" min="0" max="2" step="0.01" value="0.01" data-key="gapBase">
+      <span class="param-val">0.01</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Gap Var</span>
+      <span class="info-btn" data-tip="ギャップのランダム幅。実際のギャップ = Base + random × Var。">i</span>
+      <input type="range" min="0" max="2" step="0.01" value="0.04" data-key="gapVariance">
+      <span class="param-val">0.04</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Wave</span>
+      <span class="info-btn" data-tip="波のうねり強度。全レーンが同一の変位場を共有するため1枚の布のように動く。">i</span>
+      <input type="range" min="0" max="8" step="0.05" value="8.00" data-key="waveAmp">
+      <span class="param-val">8.00</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">Camera</div>
+    <div class="param-row">
+      <span class="param-label">Grp Rot Y</span>
+      <span class="info-btn" data-tip="リボングループの水平回転角。大きいほど斜め方向からの俯瞰になり、ラインが奥へ収束して見える。">i</span>
+      <input type="range" min="0" max="80" step="1" value="9" data-key="grpRotY" data-group="1">
+      <span class="param-val">9°</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Grp Rot X</span>
+      <span class="info-btn" data-tip="リボングループの奥行き傾き。正の値で上端が奥へ倒れ、レーンの収束角が変わる。">i</span>
+      <input type="range" min="-30" max="30" step="1" value="-27" data-key="grpRotX" data-group="1">
+      <span class="param-val">-27°</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Grp Pos Y</span>
+      <span class="info-btn" data-tip="リボングループ全体の上下位置。マイナスで下方向にオフセットする。">i</span>
+      <input type="range" min="-5" max="3" step="0.1" value="-2.2" data-key="grpPosY" data-group="1">
+      <span class="param-val">-2.20</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Cam Tilt</span>
+      <span class="info-btn" data-tip="カメラの俯仰角。マイナスで見下ろし、プラスで見上げる方向になる。">i</span>
+      <input type="range" min="-30" max="10" step="1" value="-17" data-key="camTilt">
+      <span class="param-val">-17°</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Cam FOV</span>
+      <span class="info-btn" data-tip="カメラの画角（視野角）。小さいほど望遠・圧縮感が強く、大きいほど広角・歪みが出る。">i</span>
+      <input type="range" min="20" max="120" step="1" value="84" data-key="camFov" data-camfov="1">
+      <span class="param-val">84°</span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+const lerp = (a, b, t) => a + (b - a) * t;
+
+const CONFIG = {
+  laneCount:   12,
+  laneSpread:  3.80,
+  lineHeight:  0.12,
+  segsPerLane: 12,
+  speed:       0.12,
+  gapBase:     0.01,
+  gapVariance: 0.04,
+  waveAmp:     8.00,
+  grpRotY:     9,
+  grpRotX:    -27,
+  grpPosY:    -2.20,
+  camTilt:    -17,
+  camFov:      84,
+};
+
+const WRAP_RIGHT = 24;
+const WRAP_LEFT  = -8;
+
+let _cosRY, _sinRY, _sinRX, _cosRX;
+function updateWorldXCache() {
+  const ry = CONFIG.grpRotY * Math.PI / 180;
+  const rx = CONFIG.grpRotX * Math.PI / 180;
+  _cosRY = Math.cos(ry); _sinRY = Math.sin(ry);
+  _sinRX = Math.sin(rx); _cosRX = Math.cos(rx);
+}
+updateWorldXCache();
+
+function toWorldX(lx, ly, lz) {
+  return lx * _cosRY + (ly * _sinRX + lz * _cosRX) * _sinRY;
+}
+
+function displaceY(worldX, t) {
+  const a = CONFIG.waveAmp;
+  return Math.sin(worldX * 0.30 + t * 0.40) * 0.11 * a
+       + Math.sin(worldX * 0.15 - t * 0.25) * 0.18 * a;
+}
+
+function pickSegLen() {
+  const r = Math.random();
+  if (r < 0.25) return 1.5 + Math.random() * 2;
+  if (r < 0.80) return 3.5 + Math.random() * 3.5;
+  return              7   + Math.random() * 3;
+}
+
+const PALETTE = [
+  { hex: 0x2b2f36, w: 30 },
+  { hex: 0x6b7280, w: 25 },
+  { hex: 0xc2c7cf, w: 20 },
+  { hex: 0xe5ff00, w: 15 },
+  { hex: 0x9aa3ad, w: 10 },
+];
+const PALETTE_SUM = PALETTE.reduce((s, e) => s + e.w, 0);
+function pickColor() {
+  let r = Math.random() * PALETTE_SUM;
+  for (const { hex, w } of PALETTE) { r -= w; if (r <= 0) return hex; }
+  return PALETTE[PALETTE.length - 1].hex;
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0xf0f2f5, 1);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(CONFIG.camFov, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.z = 6;
+
+const ribbonGroup = new THREE.Group();
+ribbonGroup.rotation.order = 'YXZ';
+scene.add(ribbonGroup);
+
+function applyGroup() {
+  ribbonGroup.rotation.y = CONFIG.grpRotY * Math.PI / 180;
+  ribbonGroup.rotation.x = CONFIG.grpRotX * Math.PI / 180;
+  ribbonGroup.position.y = CONFIG.grpPosY;
+  updateWorldXCache();
+}
+applyGroup();
+
+function applyCamera() {
+  camera.fov = CONFIG.camFov;
+  camera.updateProjectionMatrix();
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  rebuildScene();
+});
+
+const camTarget = { x: 0, y: 0 };
+const camCur    = { x: 0, y: 0 };
+
+window.addEventListener('mousemove', e => {
+  const nx =  (e.clientX / window.innerWidth)  * 2 - 1;
+  const ny = -(e.clientY / window.innerHeight) * 2 + 1;
+  camTarget.y = nx * (3 * Math.PI / 180);
+  camTarget.x = ny * (2 * Math.PI / 180);
+});
+
+const SUBDIVS = 24;
+
+class LaneSegment {
+  constructor({ group, laneY, laneZ, color, hw, segLen, startX }) {
+    this.group  = group;
+    this.laneY  = laneY;
+    this.laneZ  = laneZ;
+    this.hw     = hw;
+    this.segLen = segLen;
+    this.x      = startX;
+
+    const posArr = new Float32Array((SUBDIVS + 1) * 2 * 3);
+    const idx    = [];
+    for (let i = 0; i < SUBDIVS; i++) {
+      const tl = i*2, bl = i*2+1, tr = (i+1)*2, br = (i+1)*2+1;
+      idx.push(tl, bl, tr, bl, br, tr);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+    geo.setIndex(idx);
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
+    this.posArr = posArr;
+    this.geo    = geo;
+
+    const mat = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide });
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.frustumCulled = false;
+    group.add(this.mesh);
+  }
+
+  update(dt, time) {
+    this.x += CONFIG.speed * (dt / 16.667);
+    if (this.x > WRAP_RIGHT) {
+      const gap = CONFIG.gapBase + Math.random() * CONFIG.gapVariance;
+      this.x = WRAP_LEFT - this.segLen - gap;
+    }
+
+    const arr = this.posArr;
+    const hw  = this.hw;
+    const z   = this.laneZ;
+    const x0  = this.x;
+    const x1  = this.x + this.segLen;
+
+    for (let i = 0; i <= SUBDIVS; i++) {
+      const x    = lerp(x0, x1, i / SUBDIVS);
+      const wx   = toWorldX(x, this.laneY, z);
+      const disp = displaceY(wx, time);
+      arr[i*6+0] = x;  arr[i*6+1] = this.laneY + hw + disp;  arr[i*6+2] = z;
+      arr[i*6+3] = x;  arr[i*6+4] = this.laneY - hw + disp;  arr[i*6+5] = z;
+    }
+    this.geo.attributes.position.needsUpdate = true;
+  }
+
+  dispose() {
+    this.group.remove(this.mesh);
+    this.geo.dispose();
+    this.mesh.material.dispose();
+  }
+}
+
+let segments = [];
+
+function rebuildScene() {
+  for (const s of segments) s.dispose();
+  segments = [];
+
+  const { laneCount, laneSpread, lineHeight, segsPerLane } = CONFIG;
+  const hw         = lineHeight / 2;
+  const halfSpread = laneSpread / 2;
+  const scrollLen  = WRAP_RIGHT - WRAP_LEFT;
+  const slotSize   = scrollLen / segsPerLane;
+
+  for (let li = 0; li < laneCount; li++) {
+    const t         = li / Math.max(laneCount - 1, 1);
+    const laneY     = lerp(-halfSpread, halfSpread, t);
+    const laneZBase = lerp(-1.5, 1.5, t) + li * 0.005;
+
+    for (let si = 0; si < segsPerLane; si++) {
+      const color  = pickColor();
+      const segLen = pickSegLen();
+      const laneZ  = laneZBase + si * 0.001;
+
+      const slotStart = WRAP_LEFT + si * slotSize;
+      const slotEnd   = slotStart + slotSize;
+      const lo = slotStart - segLen;
+      const hi = slotEnd   - segLen;
+      const startX = lo + Math.random() * (hi - lo);
+
+      segments.push(new LaneSegment({
+        group: ribbonGroup, laneY, laneZ, color, hw, segLen, startX,
+      }));
+    }
+  }
+}
+
+rebuildScene();
+
+let prevTime = performance.now();
+let time     = 0;
+let fpsCount = 0, fpsLast = performance.now();
+const fpsEl  = document.getElementById('fps');
+
+(function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt  = Math.min(now - prevTime, 50);
+  prevTime  = now;
+  time     += dt / 1000;
+
+  fpsCount++;
+  if (now - fpsLast >= 1000) {
+    fpsEl.textContent = fpsCount + ' fps';
+    fpsCount = 0;
+    fpsLast  = now;
+  }
+
+  camCur.x = lerp(camCur.x, camTarget.x, 0.05);
+  camCur.y = lerp(camCur.y, camTarget.y, 0.05);
+  camera.rotation.order = 'YXZ';
+  camera.rotation.x = CONFIG.camTilt * Math.PI / 180 + camCur.x;
+  camera.rotation.y = camCur.y;
+
+  for (const s of segments) s.update(dt, time);
+  renderer.render(scene, camera);
+})();
+</script>
+
+<script>
+(function () {
+  // ── パネル折りたたみ ──
+  const head   = document.getElementById('panel-head');
+  const body   = document.getElementById('panel-body');
+  const btn    = document.getElementById('panel-toggle-btn');
+  let open = true;
+
+  head.addEventListener('click', () => {
+    open = !open;
+    body.style.display = open ? '' : 'none';
+    btn.textContent = open ? '−' : '+';
+  });
+
+  // ── スライダー ──
+  const DEG_KEYS = new Set(['grpRotY','grpRotX','camTilt','camFov']);
+  const INT_KEYS = new Set(['laneCount','segsPerLane']);
+
+  document.querySelectorAll('#panel-body input[type=range]').forEach(input => {
+    const valEl = input.nextElementSibling;
+
+    input.addEventListener('input', () => {
+      const key = input.dataset.key;
+      const raw = parseFloat(input.value);
+      const val = INT_KEYS.has(key) ? Math.round(raw) : raw;
+      CONFIG[key] = val;
+
+      if (INT_KEYS.has(key))      valEl.textContent = val;
+      else if (DEG_KEYS.has(key)) valEl.textContent = val + '°';
+      else                        valEl.textContent = val.toFixed(2);
+
+      if (input.dataset.rebuild) rebuildScene();
+      if (input.dataset.group)   applyGroup();
+      if (input.dataset.camfov)  applyCamera();
+    });
+  });
+
+  // ── ツールチップ ──
+  const tooltip  = document.getElementById('tooltip');
+  let hideTimer  = null;
+
+  document.querySelectorAll('.info-btn').forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimer);
+      tooltip.textContent = btn.dataset.tip;
+      tooltip.style.opacity = '0';
+      tooltip.style.display = 'block';
+
+      const rect = btn.getBoundingClientRect();
+      const tw   = tooltip.offsetWidth;
+      const th   = tooltip.offsetHeight;
+
+      let left = rect.right + 10;
+      if (left + tw > window.innerWidth - 8) left = rect.left - tw - 10;
+      let top = rect.top + rect.height / 2 - th / 2;
+      top = Math.max(8, Math.min(top, window.innerHeight - th - 8));
+
+      tooltip.style.left    = left + 'px';
+      tooltip.style.top     = top  + 'px';
+      tooltip.style.opacity = '1';
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      hideTimer = setTimeout(() => { tooltip.style.opacity = '0'; }, 120);
+    });
+  });
+})();
+</script>
+</body>
+</html>
