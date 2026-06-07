@@ -431,6 +431,11 @@
 
   // ── ドラッグ回転 ──────────────────────────────────────────────────
   let isDragging = false, prevMouse = { x: 0, y: 0 };
+  let zoomVelocity = 0;
+  const zoomMin = 3;
+  const zoomMax = 20;
+  const zoomDamping = 0.88;
+  const zoomSensitivity = 0.006;
 
   renderer.domElement.addEventListener('mousedown', e => {
     isDragging = true; prevMouse = { x: e.clientX, y: e.clientY };
@@ -455,8 +460,10 @@
   renderer.domElement.addEventListener('touchend', () => { isDragging = false; });
   renderer.domElement.addEventListener('wheel', e => {
     e.preventDefault();
-    const dist = camera.position.length() * (e.deltaY > 0 ? 1.08 : 0.92);
-    camera.position.setLength(Math.max(3, Math.min(20, dist)));
+    const delta = e.deltaY * zoomSensitivity;
+    const len = camera.position.length() + delta;
+    camera.position.setLength(Math.max(zoomMin, Math.min(zoomMax, len)));
+    zoomVelocity += delta * 0.5;
   }, { passive: false });
 
   // ── アニメーション ────────────────────────────────────────────────
@@ -481,6 +488,14 @@
     phaseOffset += twistSpeed;
     updatePositions(phaseOffset);
     materials.forEach(mat => { mat.map.offset.x -= scrollSpeed; });
+
+    if (Math.abs(zoomVelocity) > 0.0001) {
+      const len = camera.position.length() + zoomVelocity;
+      camera.position.setLength(Math.max(zoomMin, Math.min(zoomMax, len)));
+      zoomVelocity *= zoomDamping;
+      if (Math.abs(zoomVelocity) < 0.0001) zoomVelocity = 0;
+    }
+
     if (!isDragging) mesh.rotation.y += rotSpeed;
     renderer.render(scene, camera);
   }
