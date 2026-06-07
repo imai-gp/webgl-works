@@ -215,6 +215,7 @@ const geometry = new THREE.SphereGeometry(1.4, segments, segments);
 
 const blobGroup = new THREE.Group();
 blobGroup.add(new THREE.Mesh(geometry, material));
+blobGroup.scale.setScalar(0);
 scene.add(blobGroup);
 
 // ── 環境マップ ────────────────────────────────────────────────
@@ -339,6 +340,15 @@ let noiseSpeed    = 0.022;
 let baseNoiseStr  = uniforms.uNoiseStrength.value;
 let baseNoiseFreq = uniforms.uNoiseFreq.value;
 
+// ── 登場アニメーション（ふわっとスケールイン） ────────────────
+let introStartTime = null;
+let introDone = false;
+const INTRO_DURATION = 1400;
+function easeOutBack(t) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
 
 // ── アニメーションループ（60fps上限） ────────────────────────
 const FRAME_MS = 1000 / 60;
@@ -359,6 +369,17 @@ function animate(now = 0) {
     if (fpsEl) fpsEl.textContent = fps + ' fps';
     fpsFrameCount = 0;
     fpsLastTime   = now;
+  }
+
+  // 登場アニメーション
+  if (!introDone) {
+    if (introStartTime === null) introStartTime = now;
+    const t = Math.min((now - introStartTime) / INTRO_DURATION, 1);
+    blobGroup.scale.setScalar(Math.max(easeOutBack(t), 0));
+    if (t >= 1) {
+      blobGroup.scale.setScalar(1);
+      introDone = true;
+    }
   }
 
   uniforms.uTime.value          += noiseSpeed;

@@ -254,6 +254,7 @@ const material = new THREE.ShaderMaterial({
 });
 
 const blob = new THREE.Mesh(geometry, material);
+blob.scale.setScalar(0);
 scene.add(blob);
 
 // ── ライティング ──────────────────────────────────────────────
@@ -331,6 +332,16 @@ let baseNoiseFreq = uniforms.uNoiseFreq.value;
 // ── スパイクアニメーション ────────────────────────────────────
 let spikeAmount = 0.0;
 
+// ── 登場アニメーション（ふわっとスケールイン） ────────────────
+let introStartTime = null;
+let introDone = false;
+const INTRO_DURATION = 1400;
+function easeOutBack(t) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
 // クリック／タップでトゲトゲ（パネル上は除外）
 window.addEventListener('pointerdown', (e) => {
   if (e.target.closest('#panel') || e.target.closest('#panel-toggle')) return;
@@ -356,6 +367,17 @@ function animate(now = 0) {
     if (fpsEl) fpsEl.textContent = fps + ' fps';
     fpsFrameCount = 0;
     fpsLastTime   = now;
+  }
+
+  // 登場アニメーション
+  if (!introDone) {
+    if (introStartTime === null) introStartTime = now;
+    const t = Math.min((now - introStartTime) / INTRO_DURATION, 1);
+    blob.scale.setScalar(Math.max(easeOutBack(t), 0));
+    if (t >= 1) {
+      blob.scale.setScalar(1);
+      introDone = true;
+    }
   }
 
   uniforms.uTime.value += noiseSpeed;
