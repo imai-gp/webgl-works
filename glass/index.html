@@ -53,7 +53,10 @@
       text-align: right;
       user-select: none;
       z-index: 1;
+      text-decoration: none;
+      transition: opacity 0.2s;
     }
+    .meta:hover { opacity: 0.65; }
 
     #fps {
       position: fixed;
@@ -116,13 +119,28 @@
       pointer-events: none;
     }
 
-    #panel h3 {
+    #panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      cursor: pointer;
+    }
+    #panel-head h3 {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.14em;
       color: rgba(255, 255, 255, 0.30);
       text-transform: uppercase;
-      margin-bottom: 14px;
+    }
+    #panel-toggle-btn {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.30);
+      line-height: 1;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
     }
 
     .param-row {
@@ -285,13 +303,17 @@
     <div class="main-title">GLASS<br>MATERIAL</div>
   </div>
 
-  <div class="meta">COLLECTION 001<br>2026</div>
+  <a class="meta" href="/index.html">COLLECTION 001<br>2026</a>
   <div class="meta-left">WEBGL · THREE.JS<br>GLASS BLOB</div>
   <div id="fps">-- fps</div>
 
   <div id="panel">
-    <h3>Parameters</h3>
+    <div id="panel-head">
+      <h3>Parameters</h3>
+      <button id="panel-toggle-btn">−</button>
+    </div>
 
+    <div id="panel-body">
     <div class="param-row">
       <span class="param-label">ior</span>
       <span class="info-btn" data-tip="屈折率。光がガラス面で曲がる強さを表します。大きいほど歪みが強くなります。（水：1.33 / ガラス：約1.5）">i</span>
@@ -340,6 +362,7 @@
       <input type="range" id="p-env-int" min="0" max="1.5" step="0.01" value="0.85">
       <span class="param-val" id="v-env-int">0.85</span>
     </div>
+    </div>
   </div>
 
   <!-- ツールチップ（body直下でfixedにすることでoverflowクリップを回避） -->
@@ -387,6 +410,20 @@
         }, 120);
       });
     });
+
+    // ── パネル折りたたみ ──
+    (function () {
+      const head = document.getElementById('panel-head');
+      const body = document.getElementById('panel-body');
+      const btn  = document.getElementById('panel-toggle-btn');
+      let open = true;
+
+      head.addEventListener('click', () => {
+        open = !open;
+        body.style.display = open ? '' : 'none';
+        btn.textContent = open ? '−' : '+';
+      });
+    }());
   </script>
 
   <script type="module" src="/main.js"></script>
